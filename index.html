@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>店舗検索</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-box input, .search-box select { padding: 8px; font-size: 16px; }
+    .store-list { display: grid; gap: 15px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+    .store-card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; background: #f9f9f9; }
+    .store-card h3 { margin-top: 0; color: #333; }
+    .no-result { color: #666; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <h1>店舗検索</h1>
+
+  <!-- 検索フォーム -->
+  <div class="search-box">
+    <input type="text" id="keywordInput" placeholder="店舗名や住所で検索...">
+    <select id="areaSelect">
+      <option value="">すべてのエリア</option>
+      <option value="tokyo">東京</option>
+      <option value="osaka">大阪</option>
+    </select>
+  </div>
+
+  <!-- 店舗一覧を表示するコンテナ -->
+  <div id="storeList" class="store-list">
+    <p>データを読み込み中...</p>
+  </div>
+
+  <script>
+    // 1. 全店舗データを保持する配列変数
+    let allStores = [];
+
+    // 2. 外部JSONファイルを読み込む関数
+    async function loadStores() {
+      try {
+        const response = await fetch('stores.json');
+        if (!response.ok) {
+          throw new Error(`HTTPエラー: ${response.status}`);
+        }
+        allStores = await response.json();
+        
+        // 初期表示（全店舗を表示）
+        displayStores(allStores);
+      } catch (error) {
+        console.error('店舗データの取得に失敗しました:', error);
+        document.getElementById('storeList').innerHTML = '<p class="no-result">データの読み込みに失敗しました。</p>';
+      }
+    }
+
+    // 3. 店舗一覧を画面（HTML）に表示する関数
+    function displayStores(stores) {
+      const container = document.getElementById('storeList');
+      container.innerHTML = ''; // 一旦クリア
+
+      if (stores.length === 0) {
+        container.innerHTML = '<p class="no-result">該当する店舗が見つかりませんでした。</p>';
+        return;
+      }
+
+      // 各店舗のカードを生成
+      stores.forEach(store => {
+        const card = document.createElement('div');
+        card.className = 'store-card';
+        card.innerHTML = `
+          <h3>${store.name}</h3>
+          <p><strong>住所:</strong> ${store.address}</p>
+          <p><strong>TEL:</strong> ${store.tel}</p>
+          <p><strong>営業時間:</strong> ${store.hours}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // 4. 条件に合わせて店舗を絞り込む関数
+    function filterStores() {
+      const keyword = document.getElementById('keywordInput').value.toLowerCase();
+      const selectedArea = document.getElementById('areaSelect').value;
+
+      const filtered = allStores.filter(store => {
+        // キーワード検索（店舗名または住所に含まれるか）
+        const matchesKeyword = store.name.toLowerCase().includes(keyword) || 
+                               store.address.toLowerCase().includes(keyword);
+        
+        // エリア絞り込み（未選択または一致するか）
+        const matchesArea = selectedArea === '' || store.area === selectedArea;
+
+        return matchesKeyword && matchesArea;
+      });
+
+      // 絞り込んだ結果で再描画
+      displayStores(filtered);
+    }
+
+    // 5. イベントリスナーを設定（入力・選択が変わったら検索を実行）
+    document.getElementById('keywordInput').addEventListener('input', filterStores);
+    document.getElementById('areaSelect').addEventListener('change', filterStores);
+
+    // ページ読み込み時に実行
+    loadStores();
+  </script>
+</body>
+</html>
